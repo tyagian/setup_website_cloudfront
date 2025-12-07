@@ -202,15 +202,6 @@ After deployment, you'll get:
 - Route53 nameservers (update your domain registrar)
 - Website URLs (https://yourdomain.com)
 
-## Cost Considerations
-
-- **CloudFront**: Pay per request and data transfer
-- **S3**: Storage and request costs
-- **Route53**: $0.50/month per hosted zone
-- **ACM**: SSL certificates are free
-- **WAF**: $1/month + $0.60 per million requests
-- **Shield Advanced**: $3,000/month (optional)
-
 ## Migration from Legacy Setup
 
 If you're migrating from an older CloudFront setup:
