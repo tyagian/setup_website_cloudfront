@@ -1,26 +1,8 @@
-
-
-# Default provider
-provider "aws" {
-  region = var.aws_region
-}
-
-# Provider for us-east-1 (required for CloudFront resources)
-provider "aws" {
-  alias  = "us_east_1"
-  region = "us-east-1"
-}
-
 # Random suffix for unique resource names
 resource "random_id" "bucket_suffix" {
   byte_length = 4
 }
 
-# Data source to get the existing hosted zone (created automatically during domain registration)
-data "aws_route53_zone" "main" {
-  name         = var.domain_name
-  private_zone = false
-}
 
 # S3 bucket for website content (HTML, CSS, JS, images)
 resource "aws_s3_bucket" "website_content" {
@@ -153,10 +135,6 @@ resource "aws_acm_certificate" "main" {
   domain_name       = var.domain_name
   validation_method = "DNS"
   
-  subject_alternative_names = [
-    "*.${var.domain_name}"
-  ]
-  
   lifecycle {
     create_before_destroy = true
   }
@@ -167,21 +145,13 @@ resource "aws_acm_certificate" "main" {
   }
 }
 
-# DNS validation records
+# DNS validation record
 resource "aws_route53_record" "cert_validation" {
-  for_each = {
-    for dvo in aws_acm_certificate.main.domain_validation_options : dvo.domain_name => {
-      name   = dvo.resource_record_name
-      record = dvo.resource_record_value
-      type   = dvo.resource_record_type
-    }
-  }
-
   allow_overwrite = true
-  name            = each.value.name
-  records         = [each.value.record]
+  name            = tolist(aws_acm_certificate.main.domain_validation_options)[0].resource_record_name
+  records         = [tolist(aws_acm_certificate.main.domain_validation_options)[0].resource_record_value]
   ttl             = 60
-  type            = each.value.type
+  type            = tolist(aws_acm_certificate.main.domain_validation_options)[0].resource_record_type
   zone_id         = data.aws_route53_zone.main.zone_id
 }
 
@@ -189,7 +159,7 @@ resource "aws_route53_record" "cert_validation" {
 resource "aws_acm_certificate_validation" "main" {
   provider                = aws.us_east_1
   certificate_arn         = aws_acm_certificate.main.arn
-  validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
+  validation_record_fqdns = [aws_route53_record.cert_validation.fqdn]
 }
 
 # WAF Web ACL for CloudFront
@@ -342,12 +312,7 @@ resource "aws_cloudfront_response_headers_policy" "cors_policy" {
   }
 }
 
-# Shield Advanced protection (optional)
-resource "aws_shield_protection" "cloudfront" {
-  count        = var.enable_shield_advanced ? 1 : 0
-  name         = "${var.project_name}-cloudfront-protection"
-  resource_arn = module.cloudfront.distribution_arn
-}
+
 
 # CloudFront distribution using module
 module "cloudfront" {
