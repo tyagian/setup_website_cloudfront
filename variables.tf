@@ -34,11 +34,7 @@ variable "price_class" {
   }
 }
 
-variable "enable_shield_advanced" {
-  description = "Enable AWS Shield Advanced protection (additional cost applies)"
-  type        = bool
-  default     = false
-}
+
 
 variable "tags" {
   description = "Additional tags to apply to all resources"
